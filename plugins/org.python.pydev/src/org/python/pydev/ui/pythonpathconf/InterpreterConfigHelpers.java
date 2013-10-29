@@ -112,101 +112,99 @@ public class InterpreterConfigHelpers {
 
                 throw operation.e;
 
-            } else {
-                if (operation.result != null) {
-                    try {
-                        //Ok, we got the result, so, let's check if things are correct (i.e.: do we have threading.py, traceback.py?)
-                        HashSet<String> hashSet = new HashSet<String>();
-                        hashSet.add("threading");
-                        hashSet.add("traceback");
+            } else if (operation.result != null) {
+                try {
+                    //Ok, we got the result, so, let's check if things are correct (i.e.: do we have threading.py, traceback.py?)
+                    HashSet<String> hashSet = new HashSet<String>();
+                    hashSet.add("threading");
+                    hashSet.add("traceback");
 
-                        String[] validSourceFiles = FileTypesPreferencesPage.getValidSourceFiles();
-                        Set<String> extensions = new HashSet<String>(Arrays.asList(validSourceFiles));
-                        for (String s : operation.result.libs) {
-                            File file = new File(s);
-                            if (file.isDirectory()) {
-                                String[] directoryFiles = file.list();
-                                if (directoryFiles != null) {
-                                    for (String found : directoryFiles) {
-                                        List<String> split = StringUtils.split(found, '.');
-                                        if (split.size() == 2) {
-                                            if (extensions.contains(split.get(1))) {
-                                                hashSet.remove(split.get(0));
-                                            }
+                    String[] validSourceFiles = FileTypesPreferencesPage.getValidSourceFiles();
+                    Set<String> extensions = new HashSet<String>(Arrays.asList(validSourceFiles));
+                    for (String s : operation.result.libs) {
+                        File file = new File(s);
+                        if (file.isDirectory()) {
+                            String[] directoryFiles = file.list();
+                            if (directoryFiles != null) {
+                                for (String found : directoryFiles) {
+                                    List<String> split = StringUtils.split(found, '.');
+                                    if (split.size() == 2) {
+                                        if (extensions.contains(split.get(1))) {
+                                            hashSet.remove(split.get(0));
                                         }
                                     }
-                                } else {
-                                    logger.append("Warning: unable to get contents of directory: "
-                                            + file
-                                            + " (permission not available, it's not a dir or dir does not exist).");
-                                }
-                            } else if (file.isFile()) {
-                                //Zip file?
-                                try {
-                                    try (ZipFile zipFile = new ZipFile(file)) {
-                                        for (String extension : validSourceFiles) {
-                                            if (zipFile.getEntry("threading." + extension) != null) {
-                                                hashSet.remove("threading");
-                                            }
-                                            if (zipFile.getEntry("traceback." + extension) != null) {
-                                                hashSet.remove("traceback");
-                                            }
-                                        }
-                                    }
-                                } catch (Exception e) {
-                                    //ignore (not zip file)
-                                }
-                            }
-                        }
-
-                        if (hashSet.size() > 0) {
-                            if (displayErrors) {
-                                //The /Lib folder wasn't there (or at least threading.py and traceback.py weren't found)
-                                int choice = PyDialogHelpers
-                                        .openCriticalWithChoices(
-                                                "Error: Python stdlib source files not found.",
-
-                                                "Error: Python stdlib not found or stdlib found without .py files.\n"
-                                                        + "\n"
-                                                        + "It seems that the Python /Lib folder (which contains the standard library) "
-                                                        + "was not found/selected during the install process or the stdlib does not contain "
-                                                        + "the required .py files (i.e.: only has .pyc files).\n"
-                                                        + "\n"
-                                                        + "This folder (which contains files such as threading.py and traceback.py) is "
-                                                        + "required for PyDev to function properly, and it must contain the actual source files, not "
-                                                        + "only .pyc files. if you don't have the .py files in your install, please use an install from "
-                                                        + "python.org or grab the standard library for your install from there.\n"
-                                                        + "\n"
-                                                        + "If this is a virtualenv install, the /Lib folder from the base install needs to be selected "
-                                                        + "(unlike the site-packages which is optional).\n"
-                                                        + "\n"
-                                                        + "What do you want to do?\n\n"
-                                                        + "Note: if you choose to proceed, the /Lib with the standard library .py source files must "
-                                                        + "be added later on, otherwise PyDev may not function properly.",
-                                                new String[] { "Re-select folders", "Cancel", "Proceed anyways" });
-                                if (choice == 0) {
-                                    //Keep on with outer while(true)
-                                    continue;
-                                }
-                                if (choice != 2) {
-                                    return null;
                                 }
                             } else {
-                                return null;
+                                logger.append("Warning: unable to get contents of directory: "
+                                        + file
+                                        + " (permission not available, it's not a dir or dir does not exist).");
+                            }
+                        } else if (file.isFile()) {
+                            //Zip file?
+                            try {
+                                try (ZipFile zipFile = new ZipFile(file)) {
+                                    for (String extension : validSourceFiles) {
+                                        if (zipFile.getEntry("threading." + extension) != null) {
+                                            hashSet.remove("threading");
+                                        }
+                                        if (zipFile.getEntry("traceback." + extension) != null) {
+                                            hashSet.remove("traceback");
+                                        }
+                                    }
+                                }
+                            } catch (Exception e) {
+                                //ignore (not zip file)
                             }
                         }
-                    } catch (Exception e) {
-                        ErrorDialog.openError(shell,
-                                "Problem checking if the interpreter paths are correct.", e.getMessage(),
-                                PydevPlugin.makeStatus(IStatus.ERROR, "See error log for details.", e));
-                        throw e;
                     }
-                    operation.result.setName(interpreterNameAndExecutable.o1);
-                    logger.println("- Success getting the info. Result:" + operation.result);
-                    return operation;
-                } else {
-                    return null;
+
+                    if (hashSet.size() > 0) {
+                        if (displayErrors) {
+                            //The /Lib folder wasn't there (or at least threading.py and traceback.py weren't found)
+                            int choice = PyDialogHelpers
+                                    .openCriticalWithChoices(
+                                            "Error: Python stdlib source files not found.",
+
+                                            "Error: Python stdlib not found or stdlib found without .py files.\n"
+                                                    + "\n"
+                                                    + "It seems that the Python /Lib folder (which contains the standard library) "
+                                                    + "was not found/selected during the install process or the stdlib does not contain "
+                                                    + "the required .py files (i.e.: only has .pyc files).\n"
+                                                    + "\n"
+                                                    + "This folder (which contains files such as threading.py and traceback.py) is "
+                                                    + "required for PyDev to function properly, and it must contain the actual source files, not "
+                                                    + "only .pyc files. if you don't have the .py files in your install, please use an install from "
+                                                    + "python.org or grab the standard library for your install from there.\n"
+                                                    + "\n"
+                                                    + "If this is a virtualenv install, the /Lib folder from the base install needs to be selected "
+                                                    + "(unlike the site-packages which is optional).\n"
+                                                    + "\n"
+                                                    + "What do you want to do?\n\n"
+                                                    + "Note: if you choose to proceed, the /Lib with the standard library .py source files must "
+                                                    + "be added later on, otherwise PyDev may not function properly.",
+                                            new String[] { "Re-select folders", "Cancel", "Proceed anyways" });
+                            if (choice == 0) {
+                                //Keep on with outer while(true)
+                                continue;
+                            }
+                            if (choice != 2) {
+                                return null;
+                            }
+                        } else {
+                            return null;
+                        }
+                    }
+                } catch (Exception e) {
+                    ErrorDialog.openError(shell,
+                            "Problem checking if the interpreter paths are correct.", e.getMessage(),
+                            PydevPlugin.makeStatus(IStatus.ERROR, "See error log for details.", e));
+                    throw e;
                 }
+                operation.result.setName(interpreterNameAndExecutable.o1);
+                logger.println("- Success getting the info. Result:" + operation.result);
+                return operation;
+            } else {
+                return null;
             }
         }
     }
